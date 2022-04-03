@@ -1,0 +1,31 @@
+# 1. Connecting to Azure Storage Account
+
+# Azure Storage Account Name
+storage_account_name = "YOUR_STORAGE _ACCOUNTNAME"
+
+# Azure Storage Account Key -- Need to be generated from the Blob Storage
+storage_account_key = "YOUR_STORAGE_ACCOUNT_KEY" 
+
+# Azure Storage Account Source Container
+container = "YOUR_STORAGE_CONTAINER"
+
+# Set the configuration details to read/write
+spark.conf.set("fs.azure.account.key.{0}.blob.core.windows.net".format(storage_account_name), storage_account_key)
+
+%scala
+
+// Write the file to Azure Blob Storage
+
+val df = spark.read
+.option("header","true")
+.option("inferSchema", "true")
+.parquet("PATH_TO_YOUR_FILE_IN_DATABRICKS") 
+
+spark.conf.set("fs.azure.account.key.azurestorage.blob.core.windows.net","YOUR_STORAGE_ACCOUNT_KEY")
+
+// Save to the source container
+df.write.mode(SaveMode.Append).parquet("wasbs://YOUR_STORAGE_CONTAINER@YOUR_STORAGE _ACCOUNTNAME.blob.core.windows.net/YOUR_FOLDER")
+
+// Display the output in a table
+display(df)
+
