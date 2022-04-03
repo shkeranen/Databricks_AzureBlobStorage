@@ -8,3 +8,5 @@ Project Steps:
 3. Dataframes notebook was mounted to Azure Blob Storage by using security token. 
 4. Files were written to Blob Storage.
 5. Files were read from Blob Storage. 
+
+Languages used for this project has been Scala, Python and SQL.
