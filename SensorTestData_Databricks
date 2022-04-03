@@ -1,0 +1,115 @@
+# Generating first set of test data. This is a smaller of the two sets and generates dummy metadata about the sensor data.
+
+from pyspark.sql.types import LongType, IntegerType, StringType
+
+import dbldatagen as dg
+
+shuffle_partitions_requested = 8
+device_population = 100000
+data_rows = 20 * 100000000
+partitions_requested = 20
+
+spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions_requested)
+
+country_codes = ['FI1', 'SW2', 'GE2', 'PO1', 'GE1', 'NE5', 'UK2', 'FI8', 'DE2', 'DE6', 'UK9', 'SW5',
+                 'GE7', 'UK1', 'GE8', 'FI6', 'SW9', 'DE7', 'UK11']
+country_weights = [1300, 365, 67, 38, 1300, 3, 7, 212, 67, 9, 25, 6, 47, 83, 126, 109, 58, 8,
+                   17]
+
+source_types = ['Wind', 'Solar', 'Hydro', 'Nuclear', 'Heat']
+
+lines = ['Finland', 'Sweden', 'Denmark', 'Germany', 'Netherlands', 
+               'Poland', 'UK']
+
+testDataSpec = (dg.DataGenerator(spark, name="device_data_set", rows=data_rows,
+                                 partitions=partitions_requested, 
+                                 randomSeedMethod='hash_fieldname')
+                .withIdOutput()
+                # we'll use hash of the base field to generate the ids to 
+                # avoid a simple incrementing sequence
+                .withColumn("internal_device_id", LongType(), minValue=0x1000000000000,
+                            uniqueValues=device_population, omit=True, baseColumnType="hash")
+
+                # note for format strings, we must use "%lx" not "%x" as the 
+                # underlying value is a long
+                .withColumn("device_id", StringType(), format="0x%013x",
+                            baseColumn="internal_device_id")
+
+                # the device / user attributes will be the same for the same device id 
+                # so lets use the internal device id as the base column for these attribute
+                .withColumn("source_code", StringType(), values=country_codes,
+                            weights=country_weights,
+                            baseColumn="internal_device_id")
+                .withColumn("source_type", StringType(), values=source_types,
+                            baseColumn="internal_device_id")
+
+                # use omit = True if you don't want a column to appear in the final output 
+                # but just want to use it as part of generation of another column
+                .withColumn("line", StringType(), values=lines, baseColumn="source_type",
+                            baseColumnType="hash", omit=True)
+                .withColumn("model_ser", IntegerType(), minValue=1, maxValue=11,
+                            baseColumn="device_id",
+                            baseColumnType="hash", omit=True)
+
+                .withColumn("s_country_name", StringType(), expr="concat(line)",
+                            baseColumn=["line", "model_ser"])
+                .withColumn("event_type", StringType(),
+                            values=["activation", "deactivation", "plan change",
+                                    "high activity", "low activity", "device error"],
+                            random=True)
+                .withColumn("event_ts", "timestamp", begin="2020-01-01 01:00:00", end="2020-12-31 23:59:00", interval="1 minute", random=True)
+
+                )
+
+dfTestData = testDataSpec.build()
+
+
+
+# A second set of testdata. This creates a bigger set (over 1 TB) of sensor data. 
+
+
+from pyspark.sql.types import LongType, IntegerType, StringType, FloatType
+
+import dbldatagen as dg
+import math 
+
+shuffle_partitions_requested = 8
+device_population = 100000
+data_rows = 65 * 1000000000
+partitions_requested = 20
+
+
+spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions_requested)
+
+testDataSpec = (dg.DataGenerator(spark, name="device_data_set", rows=data_rows,
+                                 partitions=partitions_requested, 
+                                 randomSeedMethod='hash_fieldname')
+                .withIdOutput()
+                # we'll use hash of the base field to generate the ids to 
+                # avoid a simple incrementing sequence
+                .withColumn("internal_device_id", LongType(), minValue=0x1000000000000,
+                            uniqueValues=device_population, omit=True, baseColumnType="hash")
+               
+                # note for format strings, we must use "%lx" not "%x" as the 
+                # underlying value is a long
+                .withColumn("device_id", StringType(), format="0x%013x",
+                            baseColumn="internal_device_id")
+
+                # the device / user attributes will be the same for the same device id 
+                # so lets use the internal device id as the base column for these attribute
+                .withColumn("value", minValue=1.12, maxValue=20, step=0.21)
+               
+                .withColumn("timeserier_header_id", IntegerType(),format="1%",
+                           baseColumn="internal_device_id")
+
+                # use omit = True if you don't want a column to appear in the final output 
+                # but just want to use it as part of generation of another column
+                                
+                .withColumn("event_timestamp", "timestamp", begin="2020-01-01 01:00:00", end="2020-12-31 23:59:00", interval="1 minute", random=True)
+
+                )
+
+dfTestData2 = testDataSpec.build()
+
+display(dfTestData2)
+
