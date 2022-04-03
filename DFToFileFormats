@@ -1,0 +1,23 @@
+# These queries can be used to transform the dataframe to different fileformats. 
+
+# For Parquet 
+
+dfTestData.write.mode("overwrite").option("header", "true").format("parquet").saveAsTable("table2")
+
+#For ORC 
+
+dfTestData.write.mode("overwrite").option("header", "true").format("orc").saveAsTable("table2_ORC") 
+
+# For Avro 
+
+dfTestData.write.mode("overwrite").option("header", "true").format("Avro").saveAsTable("table2Avro") 
+
+# For Delta
+
+dfTestData.write.mode("overwrite").option("header", "true").format("delta").saveAsTable("table2delta") 
+
+# For checking the table size:
+
+%scala
+
+spark.read.table("table2").queryExecution.analyzed.stats
